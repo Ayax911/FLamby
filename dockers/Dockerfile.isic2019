@@ -4,6 +4,10 @@
 # mounted at /data at run time.
 FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
+# wget/unzip: download_isic.py shells out to them (prepare mode of the run script).
+RUN apt-get update && apt-get install -y --no-install-recommends wget unzip && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /opt/FLamby
 COPY . .
 
@@ -15,8 +19,11 @@ RUN pip freeze | grep -E '^(torch|torchvision)==' > /tmp/constraints.txt && \
 
 # The dataset is mounted at /data (the folder holding ISIC_2019_Training_Input_preprocessed/
 # and the metadata CSVs). This file tells FedIsic2019 where to look.
+# The folder is world-writable so the prepare mode (run as the host user) can rewrite the
+# file and save the license agreement; those changes die with its container.
 RUN printf 'dataset_path: /data\ndownload_complete: true\npreprocessing_complete: true\n' \
-    > flamby/datasets/fed_isic2019/dataset_creation_scripts/dataset_location.yaml
+    > flamby/datasets/fed_isic2019/dataset_creation_scripts/dataset_location.yaml && \
+    chmod -R a+w flamby/datasets/fed_isic2019/dataset_creation_scripts
 
 # The container runs as the host user (so outputs are not root-owned): HOME must be writable.
 ENV HOME=/tmp \
