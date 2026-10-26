@@ -36,6 +36,7 @@ Uso:
 """
 
 import json
+import os
 import random
 import time
 import warnings
@@ -461,6 +462,17 @@ def evaluate_split(y_true, probs, loss, split_dir, class_names):
 # --------------------------------------------------------------------------
 
 
+def _wandb_mode():
+    """`WANDB_MODE` si el usuario lo fijó; si no, online solo con credenciales
+    (variable `WANDB_API_KEY` o `wandb login` en ~/.netrc) y offline en otro
+    caso, para no bloquear nunca un entrenamiento por falta de red o login."""
+    if os.environ.get("WANDB_MODE"):
+        return os.environ["WANDB_MODE"]
+    netrc = Path.home() / ".netrc"
+    logged_in = netrc.is_file() and "api.wandb.ai" in netrc.read_text()
+    return "online" if os.environ.get("WANDB_API_KEY") or logged_in else "offline"
+
+
 class RunReporter:
     """Registra cada época/ronda y escribe todos los reportes al terminar.
 
@@ -486,6 +498,13 @@ class RunReporter:
         informativa: la evaluación final usa siempre el modelo final, porque
         elegir el modelo con test inflaría los resultados.
     use_gpu : bool
+    wandb_project : str, optional
+        Si se da, la corrida también se registra en Weights & Biases (curvas
+        por época/ronda, métricas de test en el summary y todos los PNG). Sin
+        credenciales (`WANDB_API_KEY` o `wandb login`) queda en modo offline,
+        para subirla después con `wandb sync`. None: `wandb` ni se importa.
+    wandb_name, wandb_group, wandb_tags : optional
+        Nombre, grupo y etiquetas de la corrida en W&B.
     """
 
     def __init__(
@@ -499,6 +518,10 @@ class RunReporter:
         config=None,
         best_metric="auc",
         use_gpu=True,
+        wandb_project=None,
+        wandb_name=None,
+        wandb_group=None,
+        wandb_tags=None,
     ):
         self.run_dir = Path(run_dir)
         self.loss_fn = loss_fn
@@ -528,6 +551,20 @@ class RunReporter:
         }
         path = _new_file(self.main_dir / "config.yaml")
         path.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True))
+
+        self._wandb = None
+        if wandb_project:
+            import wandb  # import perezoso: quien no usa W&B no lo necesita
+
+            self._wandb = wandb.init(
+                project=wandb_project,
+                name=wandb_name,
+                group=wandb_group,
+                tags=wandb_tags,
+                config=config,
+                dir=str(self.run_dir),
+                mode=_wandb_mode(),
+            )
 
     def _predict_all(self, model, dataloaders):
         """`predict` sobre cada dataloader (None = centro vacío) sin alterar
@@ -582,6 +619,18 @@ class RunReporter:
 
         if self.federated:
             self._log_nodes(step, train_results, test_results)
+        if self._wandb is not None:
+            payload = {k: v for k, v in row.items() if k != "epoch"}
+            for center, rows in self.node_history.items():
+                if rows and rows[-1]["round"] == step:
+                    payload.update(
+                        {
+                            f"nodes/{center}/{k}": v
+                            for k, v in rows[-1].items()
+                            if k.startswith("val_")
+                        }
+                    )
+            self._wandb.log(payload, step=step)
         best_key = f"val_{self.best_metric}"
         print(
             f"[reporter] {self.main_dir.name} paso {step}: "
@@ -644,7 +693,9 @@ class RunReporter:
 
         test_results = self._predict_all(model, self.test_dls)
         test_dir = self.run_dir / ("pooled_eval/test" if self.federated else "test")
-        evaluate_split(*self._pool(test_results), test_dir, self.class_names)
+        test_metrics = evaluate_split(
+            *self._pool(test_results), test_dir, self.class_names
+        )
 
         # Desglose por centro, con los mismos nombres de archivo que FedMammoBench.
         metrics_by_db, cm_by_db = {}, {}
@@ -673,4 +724,30 @@ class RunReporter:
             cm_by_db, test_dir / "confusion_matrix_by_database.png", self.class_names
         )
         plot_metrics_by_database(metrics_by_db, test_dir / "metrics_by_database.png")
+        if self._wandb is not None:
+            self._log_wandb_final(test_metrics, metrics_by_db, test_dir)
         print(f"[reporter] reportes escritos en {self.run_dir}")
+
+    def _log_wandb_final(self, test_metrics, metrics_by_db, test_dir):
+        """Sube a W&B lo mismo que queda en disco: métricas de test (summary),
+        todos los PNG y las predicciones; luego cierra la corrida."""
+        import wandb
+
+        summary = {f"test/{k}": v for k, v in test_metrics.items()}
+        for center, metrics in metrics_by_db.items():
+            summary.update(
+                {f"test_by_center/{center}/{k}": v for k, v in metrics.items()}
+            )
+        self._wandb.summary.update(
+            {k: v for k, v in summary.items() if isinstance(v, (int, float))}
+        )
+        files = {
+            str(png.relative_to(self.run_dir).with_suffix("")): wandb.Image(str(png))
+            for png in sorted(self.run_dir.rglob("*.png"))
+            if "wandb" not in png.parts
+        }
+        files["test/predictions"] = wandb.Table(
+            dataframe=pd.read_csv(test_dir / "predictions.csv")
+        )
+        self._wandb.log(files, step=len(self.history) or None)
+        self._wandb.finish()

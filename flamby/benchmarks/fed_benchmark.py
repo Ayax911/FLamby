@@ -1,5 +1,6 @@
 import argparse
 import copy
+import os
 from pathlib import Path
 
 import numpy as np
@@ -190,6 +191,10 @@ def main(args_cli):
             federated=federated,
             config=config,
             use_gpu=use_gpu,
+            wandb_project=args_cli.wandb_project,
+            wandb_name=f"{run_name}-seed{args_cli.seed}",
+            wandb_group=args_cli.wandb_group,
+            wandb_tags=[run_name.split("-")[0], f"seed{args_cli.seed}"],
         )
 
     # Check if some results are already computed
@@ -710,6 +715,18 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument("--seed", default=0, type=int, help="Seed")
+    parser.add_argument(
+        "--wandb-project",
+        default=os.environ.get("WANDB_PROJECT"),
+        type=str,
+        help="Also track every run in this W&B project (default: $WANDB_PROJECT).",
+    )
+    parser.add_argument(
+        "--wandb-group",
+        default=None,
+        type=str,
+        help="W&B group for the runs of this call (e.g. benchmark, grid).",
+    )
     parser.add_argument(
         "--runs-dir",
         default="runs",

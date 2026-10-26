@@ -13,6 +13,11 @@
 #                                                              # 4 containers at a time
 #   DRY_RUN=1 bash scripts/run_isic2019_docker.sh              # print the commands only
 #
+# Weights & Biases: every run is tracked in project $WANDB_PROJECT (default "flamby",
+# groups "benchmark" and "grid"). Export WANDB_API_KEY (https://wandb.ai/authorize) or
+# run `wandb login` on the host; without credentials runs are saved offline in each run's
+# wandb/ folder (upload later with `wandb sync`). WANDB_PROJECT="" disables W&B.
+#
 # Outputs (OUT_DIR):
 #   runs/fed_isic2019/seed<S>/<run>/   FedMammoBench-style reports for every run
 #   results_isic2019.csv               FLamby's results table (benchmark, all seeds)
@@ -40,6 +45,7 @@ WORKERS="${WORKERS:-4}"    # dataloader workers per container
 GRID="${GRID:-0}"
 JOBS="${JOBS:-1}"          # grid containers running at the same time on the GPU
 DRY_RUN="${DRY_RUN:-0}"
+WANDB_PROJECT="${WANDB_PROJECT-flamby}"
 
 # Grid (GRID=1): only on GRID_SEED, whatever SEEDS says. Log-spaced like the paper's search.
 GRID_SEED="${GRID_SEED:-42}"
@@ -51,6 +57,11 @@ log() { printf '\n==> %s\n' "$*"; }
 
 # ---------------------------------------------------------------- 1. image
 command -v docker >/dev/null || { echo "docker not found" >&2; exit 1; }
+if [[ "$DRY_RUN" != 1 ]] && ! docker info >/dev/null 2>&1; then
+    echo "Cannot talk to the Docker daemon. If 'docker info' says permission denied:" \
+         "sudo usermod -aG docker \$USER, then log out and back in." >&2
+    exit 1
+fi
 log "Building image $IMAGE from $REPO_DIR"
 [[ "$DRY_RUN" == 1 ]] || \
     docker build -f "$REPO_DIR/dockers/Dockerfile.isic2019" -t "$IMAGE" "$REPO_DIR"
@@ -110,9 +121,15 @@ run() {
         --user "$(id -u):$(id -g)"
         -v "$DATA_DIR:/data:ro" -v "$OUT_DIR:/out" -v "$CACHE_DIR:/cache/torch"
         -e TORCH_HOME=/cache/torch
-        "$IMAGE" "$@" --workers "$WORKERS"
+        # Passed by name only, so the key never shows in the printed command.
+        -e WANDB_API_KEY -e WANDB_ENTITY -e WANDB_MODE)
+    # `wandb login` on the host saves the key in ~/.netrc (HOME is /tmp inside).
+    [[ -f "$HOME/.netrc" ]] && cmd+=(-v "$HOME/.netrc:/tmp/.netrc:ro")
+    cmd+=("$IMAGE" "$@" --workers "$WORKERS"
         -rfp "/out/${RESULTS:-results_isic2019.csv}" --runs-dir /out/runs)
     [[ "$DEBUG" == 1 ]] && cmd+=(--debug)
+    [[ -n "$WANDB_PROJECT" ]] && cmd+=(--wandb-project "$WANDB_PROJECT"
+        --wandb-group "${WANDB_GROUP:-benchmark}")
     log "$name"
     echo "${cmd[*]}"
     [[ "$DRY_RUN" == 1 ]] && return
@@ -136,9 +153,10 @@ grid_run() {
     local name="$1"; shift
     if (( JOBS > 1 )) && [[ "$DRY_RUN" != 1 ]]; then
         while (( $(jobs -rp | wc -l) >= JOBS )); do wait -n || FAILED=$((FAILED + 1)); done
-        RESULTS="grid/$name.csv" QUIET=1 run "$name" "$@" &
+        RESULTS="grid/$name.csv" WANDB_GROUP=grid QUIET=1 run "$name" "$@" &
     else
-        RESULTS="grid/$name.csv" run "$name" "$@" || FAILED=$((FAILED + 1))
+        RESULTS="grid/$name.csv" WANDB_GROUP=grid run "$name" "$@" \
+            || FAILED=$((FAILED + 1))
     fi
 }
 

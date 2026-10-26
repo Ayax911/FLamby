@@ -15,7 +15,7 @@ COPY . .
 # nnunet's deprecated "sklearn" dependency is not pulled by [isic2019], the flag is harmless.
 RUN pip freeze | grep -E '^(torch|torchvision)==' > /tmp/constraints.txt && \
     SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True \
-    pip install --no-cache-dir -c /tmp/constraints.txt -e ".[isic2019]" pyyaml
+    pip install --no-cache-dir -c /tmp/constraints.txt -e ".[isic2019,tracking]" pyyaml
 
 # The dataset is mounted at /data (the folder holding ISIC_2019_Training_Input_preprocessed/
 # and the metadata CSVs). This file tells FedIsic2019 where to look.

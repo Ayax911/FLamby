@@ -60,6 +60,8 @@ lidc = [
     "scikit-image",
 ]
 tcga = ["lifelines"]
+# Optional experiment tracking (flamby/reporting.py, --wandb-project).
+tracking = ["wandb"]
 docs = [
     "albumentations==1.3.1",
     "batchgenerators",
@@ -81,7 +83,9 @@ docs = [
     "sphinx-rtd-theme",
 ]
 tests = ["albumentations==1.3.1", "pytest"]
-all_extra = camelyon16 + heart + isic2019 + ixi + kits19 + lidc + tcga + docs + tests
+all_extra = (
+    camelyon16 + heart + isic2019 + ixi + kits19 + lidc + tcga + tracking + docs + tests
+)
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -121,6 +125,7 @@ setup(
         "kits19": kits19,
         "lidc": lidc,
         "tcga": tcga,
+        "tracking": tracking,
         "all_extra": all_extra,
         "docs": docs,
         "tests": tests,
