@@ -18,11 +18,20 @@ from flamby.datasets.fed_isic2019 import (
     FedIsic2019,
     metric,
 )
+from flamby.reporting import RunReporter
 from flamby.utils import check_dataset_from_config, evaluate_model_on_tests
 
 
 def train_model(
-    model, optimizer, scheduler, dataloaders, dataset_sizes, device, lossfunc, num_epochs
+    model,
+    optimizer,
+    scheduler,
+    dataloaders,
+    dataset_sizes,
+    device,
+    lossfunc,
+    num_epochs,
+    reporter=None,
 ):
     """Training function
     Parameters
@@ -35,6 +44,8 @@ def train_model(
     device : device where model parameters are stored
     lossfunc : function, loss function
     num_epochs : int, numuber of epochs for training
+    reporter : flamby.reporting.RunReporter, optional, logs every epoch and
+        writes the reports (on the final model) when training ends
     Returns
     -------
     model : torch model that scored the best test accuracy
@@ -116,6 +127,8 @@ def train_model(
                 best_acc = epoch_balanced_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
 
+        if reporter is not None:
+            reporter.log_epoch(model)
         print()
 
     time_elapsed = time.time() - since
@@ -125,6 +138,9 @@ def train_model(
         )
     )
     print("Best test Balanced acc: {:4f}".format(best_acc))
+
+    if reporter is not None:
+        reporter.finish(model)
 
     # load best model weights
     model.load_state_dict(best_model_wts)
@@ -194,6 +210,27 @@ def main(args):
 
     num_epochs = NUM_EPOCHS_POOLED
 
+    reporter = None
+    if args.runs_dir:
+        test_dls = [
+            torch.utils.data.DataLoader(
+                FedIsic2019(center=i, train=False),
+                batch_size=BATCH_SIZE,
+                shuffle=False,
+                num_workers=args.workers,
+            )
+            for i in range(6)
+        ]
+        reporter = RunReporter(
+            os.path.join(args.runs_dir, "fed_isic2019", "benchmark_pooled"),
+            lossfunc,
+            "fed_isic2019",
+            [train_dataloader],
+            test_dls,
+            config={"optimizer": "Adam", "learning_rate": LR, "num_epochs": num_epochs},
+            best_metric="balanced_accuracy",
+        )
+
     t0 = time.time()
     model = train_model(
         model,
@@ -204,6 +241,7 @@ def main(args):
         device,
         lossfunc,
         num_epochs,
+        reporter=reporter,
     )
     t1 = time.time()
     print("calc time in minutes", (t1 - t0) / 60)
@@ -221,6 +259,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--workers", type=int, default=4, help="Numbers of workers for the dataloader"
+    )
+    parser.add_argument(
+        "--runs-dir",
+        type=str,
+        default="runs",
+        help="Where to write FedMammoBench-style reports ('' to disable them)",
     )
     args = parser.parse_args()
 

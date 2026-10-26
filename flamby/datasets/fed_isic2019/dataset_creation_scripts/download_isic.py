@@ -28,6 +28,13 @@ parser.add_argument(
     help="Where to store raw images, preprocessed images, ground truth, metadata, model",
     required=True,
 )
+parser.add_argument(
+    "--zip-dir",
+    type=str,
+    default=None,
+    help="Where to put the temporary 9.8GB zip (defaults to the output folder). Use a"
+    " different disk than --output-folder when one disk can't hold zip + extraction.",
+)
 args = parser.parse_args()
 
 accept_license("https://challenge.isic-archive.com/data/", "fed_isic2019")
@@ -43,7 +50,9 @@ if dict["download_complete"]:
 data_directory = dict["dataset_path"]
 
 
-dest_file_1 = os.path.join(data_directory, "ISIC_2019_Training_Input.zip")
+zip_directory = args.zip_dir if args.zip_dir is not None else data_directory
+os.makedirs(zip_directory, exist_ok=True)
+dest_file_1 = os.path.join(zip_directory, "ISIC_2019_Training_Input.zip")
 dest_file_2 = os.path.join(data_directory, "ISIC_2019_Training_Metadata.csv")
 dest_file_3 = os.path.join(data_directory, "ISIC_2019_Training_GroundTruth.csv")
 dest_file_4 = os.path.join(data_directory, "ISIC_2019_Training_Metadata_FL.csv")

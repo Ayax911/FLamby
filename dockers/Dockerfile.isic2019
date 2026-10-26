@@ -1,0 +1,29 @@
+# Fed-ISIC2019 benchmark image with GPU. Built from the LOCAL checkout (not a git clone), so
+# it carries this fork's changes (FedMammoBench-style reports in flamby/reporting.py).
+# Build and run through scripts/run_isic2019_docker.sh; the dataset is NOT baked in, it is
+# mounted at /data at run time.
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+
+WORKDIR /opt/FLamby
+COPY . .
+
+# Pin the image's torch/torchvision so pip never swaps them for a CPU or other-CUDA build.
+# nnunet's deprecated "sklearn" dependency is not pulled by [isic2019], the flag is harmless.
+RUN pip freeze | grep -E '^(torch|torchvision)==' > /tmp/constraints.txt && \
+    SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL=True \
+    pip install --no-cache-dir -c /tmp/constraints.txt -e ".[isic2019]" pyyaml
+
+# The dataset is mounted at /data (the folder holding ISIC_2019_Training_Input_preprocessed/
+# and the metadata CSVs). This file tells FedIsic2019 where to look.
+RUN printf 'dataset_path: /data\ndownload_complete: true\npreprocessing_complete: true\n' \
+    > flamby/datasets/fed_isic2019/dataset_creation_scripts/dataset_location.yaml
+
+# The container runs as the host user (so outputs are not root-owned): HOME must be writable.
+ENV HOME=/tmp \
+    MPLCONFIGDIR=/tmp/matplotlib \
+    NO_ALBUMENTATIONS_UPDATE=1 \
+    PYTHONUNBUFFERED=1
+
+# fed_benchmark.py resolves ../config_isic2019.json relative to this folder.
+WORKDIR /opt/FLamby/flamby/benchmarks
+ENTRYPOINT ["python", "fed_benchmark.py", "-cfp", "../config_isic2019.json"]

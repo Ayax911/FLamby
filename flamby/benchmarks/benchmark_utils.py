@@ -358,6 +358,7 @@ def train_single_centric(
     dp_target_delta=None,
     dp_max_grad_norm=None,
     seed=None,
+    reporter=None,
 ):
     """Train the global_init model using train_dl and default parameters.
 
@@ -388,6 +389,9 @@ def train_single_centric(
     dp_max_grad_norm: float
         The maximum L2 norm of per-sample gradients; used to enforce
         differential privacy. Defaults to None.
+    reporter: flamby.reporting.RunReporter
+        If given, logs every epoch and writes the reports when training ends.
+        Defaults to None.
 
     Returns
     -------
@@ -452,6 +456,11 @@ def train_single_centric(
                     grad_norm += torch.linalg.norm(param.grad)
             grad_norm_history.append(grad_norm)
 
+        if reporter is not None:
+            reporter.log_epoch(model)
+
+    if reporter is not None:
+        reporter.finish(model)
     return model
 
 

@@ -47,7 +47,7 @@ camelyon16 = [
     "transformers",
 ]
 heart = ["wget"]
-isic2019 = ["albumentations", "efficientnet-pytorch", "requests", "wget"]
+isic2019 = ["albumentations==1.3.1", "efficientnet-pytorch", "requests", "wget"]
 ixi = ["monai", "nibabel"]
 kits19 = ["batchgenerators", "nibabel==3.2.2", "nnunet==1.7.0"]
 lidc = [
@@ -61,7 +61,7 @@ lidc = [
 ]
 tcga = ["lifelines"]
 docs = [
-    "albumentations",
+    "albumentations==1.3.1",
     "batchgenerators",
     "dask",
     "dicom-numpy",
@@ -80,7 +80,7 @@ docs = [
     "sphinx",
     "sphinx-rtd-theme",
 ]
-tests = ["albumentations", "pytest"]
+tests = ["albumentations==1.3.1", "pytest"]
 all_extra = camelyon16 + heart + isic2019 + ixi + kits19 + lidc + tcga + docs + tests
 
 with open("README.md", "r", encoding="utf-8") as fh:

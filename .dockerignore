@@ -1,0 +1,11 @@
+.git
+**/__pycache__
+*.egg-info
+docs/_build
+outputs
+**/runs
+**/results_*.csv
+**/saved_model_state_dict*
+# Host-specific dataset paths and license marks; the image writes its own.
+**/dataset_location*.yaml
+**/license_agreement_*

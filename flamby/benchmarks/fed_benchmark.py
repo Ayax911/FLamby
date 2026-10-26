@@ -1,5 +1,6 @@
 import argparse
 import copy
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -25,6 +26,7 @@ from flamby.benchmarks.conf import (
     get_strategies,
 )
 from flamby.gpu_utils import use_gpu_idx
+from flamby.reporting import DATASET_LABELS, RunReporter
 
 
 def main(args_cli):
@@ -173,6 +175,23 @@ def main(args_cli):
         collate_fn=collate_fn,
     )
 
+    def make_reporter(run_name, train_dls, federated, config):
+        """FedMammoBench-style reports under runs_dir/dataset/seed<seed>/run_name,
+        only for classification datasets."""
+        if not args_cli.runs_dir or dataset_name not in DATASET_LABELS:
+            return None
+        run_dir = Path(args_cli.runs_dir) / dataset_name / f"seed{args_cli.seed}"
+        return RunReporter(
+            run_dir / run_name,
+            BaselineLoss(),
+            dataset_name,
+            train_dls,
+            test_dls,
+            federated=federated,
+            config=config,
+            use_gpu=use_gpu,
+        )
+
     # Check if some results are already computed
     results_file = get_results_file(config, path=args_cli.results_file_path)
     if results_file.exists():
@@ -227,6 +246,9 @@ def main(args_cli):
             dp_target_delta=pooled_hyperparameters["dp_target_delta"],
             dp_max_grad_norm=pooled_hyperparameters["dp_max_grad_norm"],
             seed=args_cli.seed,
+            reporter=make_reporter(
+                "pooled", [train_pooled], False, pooled_hyperparameters
+            ),
         )
         (
             perf_dict,
@@ -305,6 +327,9 @@ def main(args_cli):
                     dp_target_delta=pooled_hyperparameters["dp_target_delta"],
                     dp_max_grad_norm=pooled_hyperparameters["dp_max_grad_norm"],
                     seed=args_cli.seed,
+                    reporter=make_reporter(
+                        f"local_{i}", [training_dls[i]], False, pooled_hyperparameters
+                    ),
                 )
                 (
                     perf_dict,
@@ -431,7 +456,34 @@ def main(args_cli):
                     print("FL strategy", sname, " num_updates ", num_updates)
                     set_seed(args_cli.seed)
 
+                    # basename holds the hyperparameters (lr, mu...), so each
+                    # point of a grid gets its own folder.
+                    reporter = make_reporter(
+                        basename.replace(f"{dataset_name}-", "", 1),
+                        training_dls,
+                        True,
+                        {
+                            **hyperparameters,
+                            "strategy": sname,
+                            "num_updates": num_updates,
+                            "nrounds": nrounds_list[idx],
+                        },
+                    )
+                    if reporter is not None:
+                        # Log the global model after every round without
+                        # touching the strategy code: wrap perform_round.
+                        perform_round = s.perform_round
+
+                        def perform_round_and_log():
+                            perform_round()
+                            reporter.log_epoch(s.models_list[0].model)
+
+                        s.perform_round = perform_round_and_log
+
                     m = s.run()[0]
+
+                    if reporter is not None:
+                        reporter.finish(m)
 
                     (
                         perf_dict,
@@ -658,6 +710,15 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument("--seed", default=0, type=int, help="Seed")
+    parser.add_argument(
+        "--runs-dir",
+        default="runs",
+        type=str,
+        help=(
+            "Where to write FedMammoBench-style reports (metrics.csv, plots, test/)"
+            " for classification datasets. Pass an empty string to disable them."
+        ),
+    )
 
     args = parser.parse_args()
 
