@@ -123,7 +123,6 @@ strategies = "FedAvg FedProx FedAdam FedYogi FedAdagrad Scaffold Cyclic FedAvgFi
 expected = (
     ["Pooled Training"]
     + [f"Local {i}" for i in range(6)]
-    + ["Ensemble"]
     + [f"{s}100" for s in strategies.split()]
 )
 for seed in seeds:

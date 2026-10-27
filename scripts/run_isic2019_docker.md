@@ -1,7 +1,7 @@
 # Fed-ISIC2019 en Docker — guía de ejecución
 
 Corre todos los experimentos de Fed-ISIC2019 con `scripts/run_isic2019_docker.sh`:
-benchmark (pooled, 6 locales, ensemble y 8 estrategias federadas) y la malla de
+benchmark (pooled, 6 locales y 8 estrategias federadas) y la malla de
 hiperparámetros (155 corridas federadas), todo con la semilla 42. Cada corrida deja
 reportes estilo FedMammoBench y se registra en Weights & Biases.
 
@@ -113,7 +113,7 @@ Para volver: `tmux attach -t isic`.
 Qué hace, en orden:
 
 1. Benchmark de la semilla 42 en un contenedor: pooled (Adam, lr 5e-4, 20 épocas),
-   6 locales, ensemble y 8 estrategias con los hiperparámetros del paper
+   6 locales y 8 estrategias con los hiperparámetros del paper
    (`flamby/config_isic2019.json`): 9 rondas × 100 pasos locales. ~2 h.
 2. Malla: 155 corridas federadas, `JOBS` a la vez. ~8–11 h con `JOBS=4`.
    - lr de cliente: 0,001 · 0,00316 · 0,01 · 0,0316 · 0,1
@@ -136,7 +136,7 @@ docker ps                          # no debe quedar ningún contenedor flamby-is
 - Usa `stop`, no Ctrl+C: Ctrl+C puede dejar contenedores de la malla usando la GPU.
 - `stop` detiene **todos** los contenedores de FLamby, sin importar el `OUT_DIR`.
 - Lo terminado se conserva. Lo que estaba entrenando se repite al retomar
-  (si se corta en medio de los locales, se repiten los 6 por el ensemble).
+  (si se corta en medio de los locales, se repiten los 6).
 - En W&B, las corridas cortadas quedan como *crashed*; filtra por estado *finished*.
 
 **Retomar**, con las variables de la sección 3:
