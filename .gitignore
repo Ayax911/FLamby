@@ -509,3 +509,8 @@ flamby/datasets/*/dataset_creation_scripts/license_agreement*
 
 # Docker benchmark outputs (scripts/run_isic2019_docker.sh)
 outputs/
+
+*.pt
+*.pth
+wandb/
+

@@ -1,0 +1,11 @@
+{
+  "accuracy": 0.0,
+  "auc": 0.5456563483350613,
+  "balanced_accuracy": 0.0,
+  "f1": 0.0,
+  "f1_macro": 0.0,
+  "loss": 177.71550116074823,
+  "precision": 0.0,
+  "sensitivity": 0.0,
+  "specificity": 1.0
+}

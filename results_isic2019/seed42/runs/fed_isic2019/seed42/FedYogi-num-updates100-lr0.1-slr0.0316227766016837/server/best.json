@@ -1,0 +1,7 @@
+{
+  "best_round": 6,
+  "evaluated_model": "final",
+  "metric_name": "auc",
+  "metric_value": 0.5000732708089097,
+  "note": "val = test: la mejor ronda es solo informativa, test/ eval\u00faa el modelo de la \u00faltima ronda."
+}

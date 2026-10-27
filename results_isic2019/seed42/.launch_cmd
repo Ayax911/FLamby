@@ -1,0 +1,1 @@
+SEEDS="42" GRID=1 JOBS=4 DEBUG=0 bash scripts/run_isic2019_docker.sh
