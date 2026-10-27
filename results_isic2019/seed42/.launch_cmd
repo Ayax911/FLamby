@@ -1,1 +1,1 @@
-SEEDS="42" GRID=1 JOBS=4 DEBUG=0 bash scripts/run_isic2019_docker.sh
+SEEDS="42" GRID=1 BEST=1 JOBS=4 DEBUG=0 bash /media/sosagro4c/DATA3/03_pregradojulian/FLamby/scripts/run_isic2019_docker.sh

@@ -1,2 +1,2 @@
 epoch,round,train_loss,train_accuracy,train_auc,train_sensitivity,train_specificity,train_f1,train_f1_macro,train_precision,train_balanced_accuracy,val_loss,val_accuracy,val_auc,val_sensitivity,val_specificity,val_f1,val_f1_macro,val_precision,val_balanced_accuracy
-1,1,2.65778775249535e+30,0.0,0.5,0.0,1.0,0.0,0.0,0.0,0.0,2.3244914434866528e+30,0.0,0.5,0.0,1.0,0.0,0.0,0.0,0.0
+1,1,2.0303257702588395e+28,0.0,0.4990291262135922,0.0,0.9980582524271844,0.0,0.0,0.0,0.0,1.5126294060410107e+28,0.006097560975609756,0.5034013605442177,0.006802721088435374,1.0,0.011951219512195122,0.01333333333333333,0.3333333333333333,0.006802721088435374

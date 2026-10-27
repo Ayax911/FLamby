@@ -1,2 +1,2 @@
 round,num_examples,loss,accuracy,auc,sensitivity,specificity,f1,f1_macro,precision,balanced_accuracy
-1,88,8.35278982329133e+28,0.0,0.5,0.0,1.0,0.0,0.0,0.0,0.0
+1,88,3.5362735836647634e+32,0.0,0.5,0.0,1.0,0.0,0.0,0.0,0.0
