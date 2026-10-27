@@ -9,6 +9,8 @@
 #   bash scripts/run_isic2019_docker.sh
 #   DEBUG=1 bash scripts/run_isic2019_docker.sh                # 1 round/epoch, checks the pipeline
 #   SEEDS="42 43 44 45 46" GPU=1 bash scripts/run_isic2019_docker.sh
+#   BEST=1 bash scripts/run_isic2019_docker.sh                 # also config_isic2019.json again
+#                                                              # as seed42_best_* (see BEST below)
 #   GRID=1 JOBS=4 bash scripts/run_isic2019_docker.sh          # also the grid (seed 42 only),
 #                                                              # 4 containers at a time
 #   DRY_RUN=1 bash scripts/run_isic2019_docker.sh              # print the commands only
@@ -30,6 +32,8 @@
 #   results_isic2019.csv               FLamby's results table (benchmark, all seeds)
 #   grid/<run>.csv                     one results table per grid run (safe in parallel)
 #   results_isic2019_grid.csv          all grid tables merged at the end
+#   best/<run>.csv, runs_best/         BEST=1: per-run tables and reports of the best config
+#   results_isic2019_best.csv          all best tables merged at the end
 #   logs/<run>.log                     stdout/stderr of every container
 #   PROGRESS.md                        progress report (also printed by `status`)
 # Re-running is safe: experiments already in their results CSV are skipped by FLamby.
@@ -60,6 +64,11 @@ GRID_SEED="${GRID_SEED:-42}"
 GRID_LRS="${GRID_LRS:-0.001 0.0031622776601683 0.01 0.0316227766016837 0.1}"
 GRID_MUS="${GRID_MUS:-0.001 0.01 0.1 1}"
 GRID_SLRS="${GRID_SLRS:-0.001 0.0031622776601683 0.01 0.0316227766016837 0.1 1.0}"
+# Best config (BEST=1): the 8 strategies of flamby/config_isic2019.json again, one container
+# each on GRID_SEED, named seed<S>_best_<Strategy>. Own CSVs (best/), reports (runs_best/)
+# and W&B group (best_config), so they never mix with the benchmark rows and folders.
+BEST="${BEST:-0}"
+BEST_CONFIG="$REPO_DIR/flamby/config_isic2019.json"
 
 log() { printf '\n==> %s\n' "$*"; }
 
@@ -84,6 +93,27 @@ grid_each() {
             done
         done
     done
+}
+
+# best_each <fn>: calls `fn <run-name> <fed_benchmark.py args...>` for every strategy in
+# BEST_CONFIG, turning its hyperparameters into CLI flags.
+best_each() {
+    local seed="$GRID_SEED" s args
+    while read -r -u 3 s args; do
+        # shellcheck disable=SC2086  # args is a list of flags
+        "$1" "seed${seed}_best_${s}" --seed "$seed" -s "$s" $args
+    done 3< <(python3 - "$BEST_CONFIG" <<'EOF'
+import json, sys
+
+flags = {"learning_rate": "-lr", "server_learning_rate": "-slr", "mu": "-mu",
+         "num_fine_tuning_steps": "-nft", "optimizer_class": "-opt"}
+for s, hp in json.load(open(sys.argv[1]))["strategies"].items():
+    args = [f"{flags[k]} {v}" for k, v in hp.items() if k in flags]
+    if hp.get("deterministic_cycle"):
+        args.append("-d")
+    print(s, " ".join(args))
+EOF
+)
 }
 
 # write_report: $OUT_DIR/PROGRESS.md with what is done, running and pending. Finished =
@@ -146,6 +176,20 @@ EOF
                 echo
                 printf -- '- %s\n' "${pending[@]}"
             fi
+        fi
+        if [[ "$BEST" == 1 ]]; then
+            local best=() s todo=()
+            collect_best() { best+=("$1"); }
+            best_each collect_best
+            echo
+            echo "## Mejor config (config_isic2019.json), semilla $GRID_SEED:" \
+                "$(for s in "${best[@]}"; do [[ -s "$OUT_DIR/best/$s.csv" ]] && echo; done \
+                    | wc -l)/${#best[@]}"
+            echo
+            for s in "${best[@]}"; do
+                if [[ -s "$OUT_DIR/best/$s.csv" ]]; then echo "- [x] $s"
+                else echo "- [ ] $s"; fi
+            done
         fi
     } > "$tmp"
     mv "$tmp" "$OUT_DIR/PROGRESS.md"
@@ -222,12 +266,13 @@ for f in ISIC_2019_Training_Input_preprocessed ISIC_2019_Training_Metadata_FL.cs
         exit 1
     fi
 done
-mkdir -p "$OUT_DIR/logs" "$OUT_DIR/grid" "$CACHE_DIR"
+mkdir -p "$OUT_DIR/logs" "$OUT_DIR/grid" "$OUT_DIR/best" "$CACHE_DIR"
 # A new launch clears a previous pause and records itself for `status` and PROGRESS.md.
 rm -f "$OUT_DIR/STOP"
 if [[ "$DRY_RUN" != 1 ]]; then
-    echo "SEEDS=\"$SEEDS\" GRID=$GRID JOBS=$JOBS DEBUG=$DEBUG bash $0" > "$OUT_DIR/.launch_cmd"
-    declare -p SEEDS GRID GRID_SEED GRID_LRS GRID_MUS GRID_SLRS DEBUG \
+    echo "SEEDS=\"$SEEDS\" GRID=$GRID BEST=$BEST JOBS=$JOBS DEBUG=$DEBUG bash $0" \
+        > "$OUT_DIR/.launch_cmd"
+    declare -p SEEDS GRID BEST GRID_SEED GRID_LRS GRID_MUS GRID_SLRS DEBUG \
         > "$OUT_DIR/.launch_env"
 fi
 
@@ -248,7 +293,7 @@ run() {
     # `wandb login` on the host saves the key in ~/.netrc (HOME is /tmp inside).
     [[ -f "$HOME/.netrc" ]] && cmd+=(-v "$HOME/.netrc:/tmp/.netrc:ro")
     cmd+=("$IMAGE" "$@" --workers "$WORKERS"
-        -rfp "/out/${RESULTS:-results_isic2019.csv}" --runs-dir /out/runs)
+        -rfp "/out/${RESULTS:-results_isic2019.csv}" --runs-dir "/out/${RUNS_DIR:-runs}")
     [[ "$DEBUG" == 1 ]] && cmd+=(--debug)
     [[ -n "$WANDB_PROJECT" ]] && cmd+=(--wandb-project "$WANDB_PROJECT"
         --wandb-group "${WANDB_GROUP:-benchmark}")
@@ -278,33 +323,43 @@ for seed in $SEEDS; do
     run "seed${seed}_benchmark" --seed "$seed"
 done
 
-# Each grid run writes its own results CSV: FLamby rewrites the whole file, so parallel
-# runs sharing one CSV would drop each other's rows.
+# Each grid/best run writes its own results CSV: FLamby rewrites the whole file, so
+# parallel runs sharing one CSV would drop each other's rows.
 FAILED=0
-grid_run() {
-    local name="$1"; shift
+# queue_run <csv-dir> <wandb-group> <runs-dir> <run-name> <args...>: up to JOBS at once.
+queue_run() {
+    local dir="$1" group="$2" runs="$3" name="$4"; shift 4
+    # Finished = its table exists (FLamby writes it at the end); skip without a container.
+    [[ -s "$OUT_DIR/$dir/$name.csv" ]] && return 0
     if (( JOBS > 1 )) && [[ "$DRY_RUN" != 1 ]]; then
         while (( $(jobs -rp | wc -l) >= JOBS )); do wait -n || FAILED=$((FAILED + 1)); done
-        RESULTS="grid/$name.csv" WANDB_GROUP=grid QUIET=1 run "$name" "$@" &
+        RESULTS="$dir/$name.csv" WANDB_GROUP="$group" RUNS_DIR="$runs" QUIET=1 \
+            run "$name" "$@" &
     else
-        RESULTS="grid/$name.csv" WANDB_GROUP=grid run "$name" "$@" \
-            || FAILED=$((FAILED + 1))
+        RESULTS="$dir/$name.csv" WANDB_GROUP="$group" RUNS_DIR="$runs" \
+            run "$name" "$@" || FAILED=$((FAILED + 1))
     fi
 }
+grid_run() { queue_run grid grid runs "$@"; }
+best_run() { queue_run best best_config runs_best "$@"; }
 
-if [[ "$GRID" == 1 ]]; then
-    grid_each grid_run
-    for pid in $(jobs -p); do wait "$pid" || FAILED=$((FAILED + 1)); done
-
-    log "Merging grid results into $OUT_DIR/results_isic2019_grid.csv"
+# merge_tables <csv-dir> <merged csv>
+merge_tables() {
+    log "Merging $1/ results into $OUT_DIR/$2"
     [[ "$DRY_RUN" == 1 ]] || docker run --rm --user "$(id -u):$(id -g)" -v "$OUT_DIR:/out" \
         --entrypoint python "$IMAGE" -c "
 import glob, pandas as pd
-files = sorted(glob.glob('/out/grid/*.csv'))
+files = sorted(glob.glob('/out/$1/*.csv'))
 if files:
-    pd.concat(map(pd.read_csv, files)).to_csv('/out/results_isic2019_grid.csv', index=False)
-print(len(files), 'grid tables merged')"
-fi
+    pd.concat(map(pd.read_csv, files)).to_csv('/out/$2', index=False)
+print(len(files), 'tables merged')"
+}
+
+[[ "$GRID" == 1 ]] && grid_each grid_run
+[[ "$BEST" == 1 ]] && best_each best_run
+for pid in $(jobs -p); do wait "$pid" || FAILED=$((FAILED + 1)); done
+[[ "$GRID" == 1 ]] && merge_tables grid results_isic2019_grid.csv
+[[ "$BEST" == 1 ]] && merge_tables best results_isic2019_best.csv
 
 write_report
 if [[ -f "$OUT_DIR/STOP" ]]; then
@@ -313,6 +368,6 @@ if [[ -f "$OUT_DIR/STOP" ]]; then
 fi
 log "Done. Reports in $OUT_DIR/runs/fed_isic2019 (progress: $OUT_DIR/PROGRESS.md)"
 if (( FAILED > 0 )); then
-    echo "$FAILED grid run(s) failed; re-run the same command to retry only those." >&2
+    echo "$FAILED grid/best run(s) failed; re-run the same command to retry only those." >&2
     exit 1
 fi
