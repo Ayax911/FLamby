@@ -25,7 +25,7 @@ set -euo pipefail
 MODE="${1:-run}"   # run | stop | status
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export OUT_DIR="${OUT_DIR:-$REPO_DIR/outputs/isic2019}"
-export SEEDS=42 GRID_SEED=42 GRID=1 BEST=0 JOBS="${JOBS:-4}"
+export SEEDS=42 GRID_SEED=42 BENCH=0 GRID=1 BEST=0 JOBS="${JOBS:-4}"
 
 # Same spelling as the existing run names (grid/seed42_grid_<S>_lr<LR>_slr<SLR>.csv).
 export GRID_LRS="0.001 0.0031622776601683 0.01 0.0316227766016837 0.1 0.316227766016838"

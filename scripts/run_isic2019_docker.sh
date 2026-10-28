@@ -53,6 +53,7 @@ CACHE_DIR="${CACHE_DIR:-$HOME/.cache/torch}"   # EfficientNet weights, downloade
 IMAGE="${IMAGE:-flamby-isic2019}"
 GPU="${GPU:-0}"            # host GPU index the containers get (seen inside as GPU 0)
 SEEDS="${SEEDS:-42}"
+BENCH="${BENCH:-1}"        # 0: skip the benchmark (only GRID/BEST runs)
 WORKERS="${WORKERS:-4}"    # dataloader workers per container
 GRID="${GRID:-0}"
 JOBS="${JOBS:-1}"          # grid containers running at the same time on the GPU
@@ -165,15 +166,17 @@ for seed in seeds:
     print()
 EOF
         if [[ "$GRID" == 1 ]]; then
-            local names=() name pending=()
+            local names=() name pending=() nskip=0
             collect() { names+=("$1"); }
             grid_each collect
             for name in "${names[@]}"; do
-                [[ -s "$OUT_DIR/grid/$name.csv" || " $GRID_SKIP " == *" $name "* ]] \
-                    || pending+=("$name")
+                if [[ " $GRID_SKIP " == *" $name "* ]]; then nskip=$((nskip + 1))
+                elif [[ ! -s "$OUT_DIR/grid/$name.csv" ]]; then pending+=("$name"); fi
             done
-            echo "## Malla, semilla $GRID_SEED: $(( ${#names[@]} - ${#pending[@]} ))/${#names[@]}"
+            local total=$(( ${#names[@]} - nskip ))
+            echo "## Malla, semilla $GRID_SEED: $(( total - ${#pending[@]} ))/$total"
             echo
+            (( nskip > 0 )) && echo "($nskip omitidas a propósito con GRID_SKIP)" && echo
             if (( ${#pending[@]} > 0 )); then
                 echo "Pendientes (incluye las que estén en curso):"
                 echo
@@ -212,6 +215,17 @@ if [[ "$MODE" == stop || "$MODE" == status ]]; then
     write_report
     cat "$OUT_DIR/PROGRESS.md"
     exit 0
+fi
+
+# One launch per OUT_DIR: two benchmark containers rewriting the same results CSV can read
+# it half-written and retrain experiments that were already done (it happened once).
+if [[ "$DRY_RUN" != 1 ]]; then
+    mkdir -p "$OUT_DIR"
+    exec 9>"$OUT_DIR/.lock"
+    if ! flock -n 9; then
+        echo "Another launch is already running on $OUT_DIR (see '$0 status')." >&2
+        exit 1
+    fi
 fi
 
 # ---------------------------------------------------------------- 1. image
@@ -321,7 +335,7 @@ run() {
     write_report
 }
 
-for seed in $SEEDS; do
+[[ "$BENCH" == 1 ]] && for seed in $SEEDS; do
     # No -s/-scb: pooled + 6 locals + every strategy in the config, in one process.
     run "seed${seed}_benchmark" --seed "$seed"
 done
