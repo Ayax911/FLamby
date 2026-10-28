@@ -64,6 +64,8 @@ GRID_SEED="${GRID_SEED:-42}"
 GRID_LRS="${GRID_LRS:-0.001 0.0031622776601683 0.01 0.0316227766016837 0.1}"
 GRID_MUS="${GRID_MUS:-0.001 0.01 0.1 1}"
 GRID_SLRS="${GRID_SLRS:-0.001 0.0031622776601683 0.01 0.0316227766016837 0.1 1.0}"
+# Grid run names (seed<S>_grid_...) to leave out, e.g. runs known to diverge.
+GRID_SKIP="${GRID_SKIP:-}"
 # Best config (BEST=1): the 8 strategies of flamby/config_isic2019.json again, one container
 # each on GRID_SEED, named seed<S>_best_<Strategy>. Own CSVs (best/), reports (runs_best/)
 # and W&B group (best_config), so they never mix with the benchmark rows and folders.
@@ -167,7 +169,8 @@ EOF
             collect() { names+=("$1"); }
             grid_each collect
             for name in "${names[@]}"; do
-                [[ -s "$OUT_DIR/grid/$name.csv" ]] || pending+=("$name")
+                [[ -s "$OUT_DIR/grid/$name.csv" || " $GRID_SKIP " == *" $name "* ]] \
+                    || pending+=("$name")
             done
             echo "## Malla, semilla $GRID_SEED: $(( ${#names[@]} - ${#pending[@]} ))/${#names[@]}"
             echo
@@ -272,7 +275,7 @@ rm -f "$OUT_DIR/STOP"
 if [[ "$DRY_RUN" != 1 ]]; then
     echo "SEEDS=\"$SEEDS\" GRID=$GRID BEST=$BEST JOBS=$JOBS DEBUG=$DEBUG bash $0" \
         > "$OUT_DIR/.launch_cmd"
-    declare -p SEEDS GRID BEST GRID_SEED GRID_LRS GRID_MUS GRID_SLRS DEBUG \
+    declare -p SEEDS GRID BEST GRID_SEED GRID_LRS GRID_MUS GRID_SLRS GRID_SKIP DEBUG \
         > "$OUT_DIR/.launch_env"
 fi
 
@@ -331,6 +334,7 @@ queue_run() {
     local dir="$1" group="$2" runs="$3" name="$4"; shift 4
     # Finished = its table exists (FLamby writes it at the end); skip without a container.
     [[ -s "$OUT_DIR/$dir/$name.csv" ]] && return 0
+    [[ "$dir" == grid && " $GRID_SKIP " == *" $name "* ]] && return 0
     if (( JOBS > 1 )) && [[ "$DRY_RUN" != 1 ]]; then
         while (( $(jobs -rp | wc -l) >= JOBS )); do wait -n || FAILED=$((FAILED + 1)); done
         RESULTS="$dir/$name.csv" WANDB_GROUP="$group" RUNS_DIR="$runs" QUIET=1 \
