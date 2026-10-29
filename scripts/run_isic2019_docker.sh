@@ -16,6 +16,9 @@
 #   DRY_RUN=1 bash scripts/run_isic2019_docker.sh              # print the commands only
 #   bash scripts/run_isic2019_docker.sh stop                   # pause: stop the containers
 #   bash scripts/run_isic2019_docker.sh status                 # where it is (PROGRESS.md)
+#   DATASET=fed_isic2019_binary bash scripts/run_isic2019_docker.sh   # benign-vs-malignant task
+#                                                              # (config_isic2019_binary.json,
+#                                                              # OUT_DIR outputs/isic2019_binary)
 #
 # Pause/resume: `stop` (from another terminal, same OUT_DIR) stops the running containers
 # and launches nothing else; finished experiments are kept. Re-running the same command
@@ -28,7 +31,7 @@
 # wandb/ folder (upload later with `wandb sync`). WANDB_PROJECT="" disables W&B.
 #
 # Outputs (OUT_DIR):
-#   runs/fed_isic2019/seed<S>/<run>/   FedMammoBench-style reports for every run
+#   runs/$DATASET/seed<S>/<run>/       FedMammoBench-style reports for every run
 #   results_isic2019.csv               FLamby's results table (benchmark, all seeds)
 #   grid/<run>.csv                     one results table per grid run (safe in parallel)
 #   results_isic2019_grid.csv          all grid tables merged at the end
@@ -41,13 +44,22 @@ set -euo pipefail
 
 MODE="${1:-run}"   # run | prepare | stop | status
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# DATASET picks the task: fed_isic2019 (8 classes, default) or fed_isic2019_binary (benign vs
+# malignant). Both read the same images from DATA_DIR; only the config, the output folders and
+# the model/loss/labels differ. Use a different OUT_DIR per task (the default already does).
+DATASET="${DATASET:-fed_isic2019}"
+case "$DATASET" in
+    fed_isic2019)        CONFIG_FILE="config_isic2019.json";        OUT_SUFFIX="isic2019" ;;
+    fed_isic2019_binary) CONFIG_FILE="config_isic2019_binary.json"; OUT_SUFFIX="isic2019_binary" ;;
+    *) echo "Unknown DATASET=$DATASET (fed_isic2019 | fed_isic2019_binary)" >&2; exit 1 ;;
+esac
 DATA_DIR="${DATA_DIR:-$HOME/datasets/fed_isic2019}"
 ZIP_DIR="${ZIP_DIR:-$DATA_DIR}"   # prepare: where the 9.8 GB zip lives until extracted
 DEBUG="${DEBUG:-0}"
 if [[ "$DEBUG" == 1 ]]; then
-    OUT_DIR="${OUT_DIR:-$REPO_DIR/outputs/isic2019_debug}"
+    OUT_DIR="${OUT_DIR:-$REPO_DIR/outputs/${OUT_SUFFIX}_debug}"
 else
-    OUT_DIR="${OUT_DIR:-$REPO_DIR/outputs/isic2019}"
+    OUT_DIR="${OUT_DIR:-$REPO_DIR/outputs/$OUT_SUFFIX}"
 fi
 CACHE_DIR="${CACHE_DIR:-$HOME/.cache/torch}"   # EfficientNet weights, downloaded once
 IMAGE="${IMAGE:-flamby-isic2019}"
@@ -71,7 +83,7 @@ GRID_SKIP="${GRID_SKIP:-}"
 # each on GRID_SEED, named seed<S>_best_<Strategy>. Own CSVs (best/), reports (runs_best/)
 # and W&B group (best_config), so they never mix with the benchmark rows and folders.
 BEST="${BEST:-0}"
-BEST_CONFIG="$REPO_DIR/flamby/config_isic2019.json"
+BEST_CONFIG="$REPO_DIR/flamby/$CONFIG_FILE"
 
 log() { printf '\n==> %s\n' "$*"; }
 
@@ -131,7 +143,7 @@ write_report() {
     elif [[ -f "$OUT_DIR/STOP" ]]; then state="pausado"
     else state="detenido (terminado, o cortado sin \`stop\`)"; fi
     {
-        echo "# Progreso Fed-ISIC2019"
+        echo "# Progreso $DATASET"
         echo
         echo "- Actualizado: $(date '+%Y-%m-%d %H:%M:%S')"
         echo "- Estado: **$state**"
@@ -188,7 +200,7 @@ EOF
             collect_best() { best+=("$1"); }
             best_each collect_best
             echo
-            echo "## Mejor config (config_isic2019.json), semilla $GRID_SEED:" \
+            echo "## Mejor config ($CONFIG_FILE), semilla $GRID_SEED:" \
                 "$(for s in "${best[@]}"; do [[ -s "$OUT_DIR/best/$s.csv" ]] && echo; done \
                     | wc -l)/${#best[@]}"
             echo
@@ -287,9 +299,10 @@ mkdir -p "$OUT_DIR/logs" "$OUT_DIR/grid" "$OUT_DIR/best" "$CACHE_DIR"
 # A new launch clears a previous pause and records itself for `status` and PROGRESS.md.
 rm -f "$OUT_DIR/STOP"
 if [[ "$DRY_RUN" != 1 ]]; then
-    echo "SEEDS=\"$SEEDS\" GRID=$GRID BEST=$BEST JOBS=$JOBS DEBUG=$DEBUG bash $0" \
+    echo "DATASET=$DATASET SEEDS=\"$SEEDS\" GRID=$GRID BEST=$BEST JOBS=$JOBS DEBUG=$DEBUG bash $0" \
         > "$OUT_DIR/.launch_cmd"
-    declare -p SEEDS GRID BEST GRID_SEED GRID_LRS GRID_MUS GRID_SLRS GRID_SKIP DEBUG \
+    declare -p DATASET CONFIG_FILE BEST_CONFIG SEEDS GRID BEST GRID_SEED GRID_LRS GRID_MUS \
+        GRID_SLRS GRID_SKIP DEBUG \
         > "$OUT_DIR/.launch_env"
 fi
 
@@ -309,7 +322,7 @@ run() {
         -e WANDB_API_KEY -e WANDB_ENTITY -e WANDB_MODE)
     # `wandb login` on the host saves the key in ~/.netrc (HOME is /tmp inside).
     [[ -f "$HOME/.netrc" ]] && cmd+=(-v "$HOME/.netrc:/tmp/.netrc:ro")
-    cmd+=("$IMAGE" "$@" --workers "$WORKERS"
+    cmd+=("$IMAGE" "$@" --workers "$WORKERS" -cfp "../$CONFIG_FILE"
         -rfp "/out/${RESULTS:-results_isic2019.csv}" --runs-dir "/out/${RUNS_DIR:-runs}")
     [[ "$DEBUG" == 1 ]] && cmd+=(--debug)
     [[ -n "$WANDB_PROJECT" ]] && cmd+=(--wandb-project "$WANDB_PROJECT"
@@ -384,7 +397,7 @@ if [[ -f "$OUT_DIR/STOP" ]]; then
     log "Paused. Progress in $OUT_DIR/PROGRESS.md; re-run the same command to resume."
     exit 0
 fi
-log "Done. Reports in $OUT_DIR/runs/fed_isic2019 (progress: $OUT_DIR/PROGRESS.md)"
+log "Done. Reports in $OUT_DIR/runs/$DATASET (progress: $OUT_DIR/PROGRESS.md)"
 if (( FAILED > 0 )); then
     echo "$FAILED grid/best run(s) failed; re-run the same command to retry only those." >&2
     exit 1

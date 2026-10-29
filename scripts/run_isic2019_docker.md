@@ -189,6 +189,7 @@ oficial de FLamby para ISIC es la balanced accuracy.
 
 | Variable | Por defecto | Para qué |
 |---|---|---|
+| `DATASET` | `fed_isic2019` | `fed_isic2019` (8 clases) o `fed_isic2019_binary` |
 | `DATA_DIR` | `~/datasets/fed_isic2019` | Datos preprocesados |
 | `OUT_DIR` | `outputs/isic2019` (`_debug` con `DEBUG=1`) | Resultados |
 | `CACHE_DIR` | `~/.cache/torch` | Pesos de EfficientNet |
@@ -202,3 +203,32 @@ oficial de FLamby para ISIC es la balanced accuracy.
 | `WANDB_PROJECT` | `flamby` | Proyecto W&B (`""` lo desactiva) |
 | `DEBUG` | `0` | 1 ronda / 1 época |
 | `DRY_RUN` | `0` | Solo imprime los comandos |
+
+## Versión binaria (benigno vs maligno)
+
+Mismo script y mismas imágenes (`DATA_DIR`); solo cambia la variable `DATASET`. Con
+`DATASET=fed_isic2019_binary` el script usa `flamby/config_isic2019_binary.json`, guarda los
+resultados en `outputs/isic2019_binary` (si no fijas `OUT_DIR`) y los reportes en
+`$OUT_DIR/runs/fed_isic2019_binary/`. El detalle de la tarea y de los cambios está en
+`flamby/datasets/fed_isic2019_binary/MODIFICACIONES_BINARIO.md`.
+
+```bash
+cd /media/sosagro4c/DATA3/03_pregradojulian/FLamby
+export DATA_DIR=/media/sosagro4c/DATA3/03_pregradojulian/fed_isic2019
+export CACHE_DIR=/media/sosagro4c/DATA3/03_pregradojulian/cache_torch
+export OUT_DIR=/media/sosagro4c/DATA3/03_pregradojulian/outputs/isic2019_binary
+export DATASET=fed_isic2019_binary
+
+DEBUG=1 OUT_DIR=$OUT_DIR-debug WANDB_PROJECT=flamby-debug bash scripts/run_isic2019_docker.sh  # humo
+bash scripts/run_isic2019_docker.sh            # benchmark (Pooled + 6 Local + 8 estrategias)
+GRID=1 JOBS=4 bash scripts/run_isic2019_docker.sh   # además la malla (semilla 42)
+bash scripts/run_isic2019_docker.sh status     # recuerda mantener DATASET/OUT_DIR exportados
+```
+
+- **No reutilices el `OUT_DIR` del multiclase**: FLamby saltaría experimentos "ya hechos" del CSV.
+- `stop` detiene todos los contenedores de FLamby (multiclase y binario), como antes.
+- La imagen copia el repo (`COPY . .`): tras editar el CSV o el código hay que reconstruirla; el
+  script lo hace solo al lanzarse.
+- Los hiperparámetros del config binario son los del multiclase; conviene correr la malla.
+- Para cambiar qué clases son malignas, ver `dataset_creation_scripts/make_binary_target.py`
+  (sección "Modificar el CSV" del `.md` de modificaciones).

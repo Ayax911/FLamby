@@ -72,6 +72,17 @@ DATASET_LABELS = {
         ],
         "classes": ["MEL", "NV", "BCC", "AK", "BKL", "DF", "VASC", "SCC"],
     },
+    "fed_isic2019_binary": {
+        "centers": [
+            "BCN",
+            "HAM_vidir_molemax",
+            "HAM_vidir_modern",
+            "HAM_rosendahl",
+            "MSK",
+            "HAM_vienna_dias",
+        ],
+        "classes": ["Benigno", "Maligno"],
+    },
     "fed_heart_disease": {
         "centers": ["cleveland", "hungarian", "switzerland", "va"],
         "classes": ["Sin enfermedad", "Con enfermedad"],
