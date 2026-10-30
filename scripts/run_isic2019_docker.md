@@ -225,6 +225,9 @@ GRID=1 JOBS=4 bash scripts/run_isic2019_docker.sh   # además la malla (semilla 
 bash scripts/run_isic2019_docker.sh status     # recuerda mantener DATASET/OUT_DIR exportados
 ```
 
+- **Todo el experimento de una vez:** `bash run_binary.sh` (raíz del repo) lanza benchmark + `best` +
+  la malla completa del paper (233 corridas, como `run.sh` del multiclase pero sin omitir ninguna
+  por divergencia). `JOBS=4` por defecto; `stop`, `status` y `DRY_RUN=1` funcionan igual.
 - **No reutilices el `OUT_DIR` del multiclase**: FLamby saltaría experimentos "ya hechos" del CSV.
 - `stop` detiene todos los contenedores de FLamby (multiclase y binario), como antes.
 - La imagen copia el repo (`COPY . .`): tras editar el CSV o el código hay que reconstruirla; el

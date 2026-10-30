@@ -171,7 +171,8 @@ points at `fed_isic2019` (shared data). Run with `config_isic2019_binary.json`; 
 `DATASET_LABELS` entry in `reporting.py` or reports are silently skipped. Hyperparameters are
 copied from the 8-class config. The Docker runner takes `DATASET=fed_isic2019_binary` (picks the
 config, default `OUT_DIR` and `runs/$DATASET`); `dataset_creation_scripts/make_binary_target.py`
-regenerates `binary_target` and prints the `NUM_TRAIN_SAMPLES`/`alpha` to copy. Full
+regenerates `binary_target` and prints the `NUM_TRAIN_SAMPLES`/`alpha` to copy. `run_binary.sh`
+(repo root) is the binary counterpart of `run.sh`: benchmark + best + the 233-run paper grid. Full
 rationale: `flamby/datasets/fed_isic2019_binary/MODIFICACIONES_BINARIO.md`.
 
 Caveats seen while reading the code (verify before relying on them):
