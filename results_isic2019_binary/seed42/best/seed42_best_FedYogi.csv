@@ -1,0 +1,8 @@
+Metric,Method,seed,learning_rate,Test,server_learning_rate,optimizer_class
+0.7430882554568886,FedYogi100,42,0.01,client_test_0,0.0031622776601683,<class 'torch.optim.sgd.SGD'>
+0.6750317662007623,FedYogi100,42,0.01,client_test_1,0.0031622776601683,<class 'torch.optim.sgd.SGD'>
+0.7194335327202928,FedYogi100,42,0.01,client_test_2,0.0031622776601683,<class 'torch.optim.sgd.SGD'>
+0.6745343967207271,FedYogi100,42,0.01,client_test_3,0.0031622776601683,<class 'torch.optim.sgd.SGD'>
+0.6010647737355812,FedYogi100,42,0.01,client_test_4,0.0031622776601683,<class 'torch.optim.sgd.SGD'>
+0.70042194092827,FedYogi100,42,0.01,client_test_5,0.0031622776601683,<class 'torch.optim.sgd.SGD'>
+0.7322574320385777,FedYogi100,42,0.01,Pooled Test,0.0031622776601683,<class 'torch.optim.sgd.SGD'>
