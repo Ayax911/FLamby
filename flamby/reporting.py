@@ -83,6 +83,14 @@ DATASET_LABELS = {
         ],
         "classes": ["Benigno", "Maligno"],
     },
+    "fed_mammobench": {
+        "centers": ["CMMD", "KAU-BCMD", "CDD-CESM", "INbreast"],
+        "classes": ["Benigno", "Maligno"],
+    },
+    "fed_mammobench_efficientnetv2": {
+        "centers": ["CMMD", "KAU-BCMD", "CDD-CESM", "INbreast"],
+        "classes": ["Benigno", "Maligno"],
+    },
     "fed_heart_disease": {
         "centers": ["cleveland", "hungarian", "switzerland", "va"],
         "classes": ["Sin enfermedad", "Con enfermedad"],
