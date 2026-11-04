@@ -49,7 +49,7 @@ camelyon16 = [
 heart = ["wget"]
 isic2019 = ["albumentations==1.3.1", "efficientnet-pytorch", "requests", "wget"]
 ixi = ["monai", "nibabel"]
-mammobench = ["pyyaml"]
+mammobench = ["efficientnet-pytorch", "pyyaml"]
 kits19 = ["batchgenerators", "nibabel==3.2.2", "nnunet==1.7.0"]
 lidc = [
     "dask",

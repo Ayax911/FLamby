@@ -19,7 +19,7 @@
 # Env: DATA_DIR (folder with norm_0_1/, default <repo>/../data/preproccesed_julian), CACHE_DIR
 # (default <repo>/../cache_torch), OUT_DIR (default outputs/mammobench_efficientnetv2), JOBS (4), GPU (0),
 # BENCH/BEST/GRID (1), WANDB_API_KEY / WANDB_ENTITY / WANDB_PROJECT / WANDB_MODE,
-# MAMMOBENCH_UNFREEZE, MAMMOBENCH_EFFNET.
+# MAMMOBENCH_EFFNET (s|m|l).
 set -euo pipefail
 
 MODE="${1:-run}"   # run | weights | stop | status

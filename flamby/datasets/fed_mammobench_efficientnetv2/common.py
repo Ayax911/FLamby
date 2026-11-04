@@ -1,5 +1,5 @@
 # Same task, data and training budget as fed_mammobench: only the backbone changes
-# (EfficientNetV2 instead of ResNet50), so the two are directly comparable.
+# (EfficientNetV2 instead of EfficientNet-B0), so the two are directly comparable.
 from flamby.datasets.fed_mammobench.common import (  # noqa: F401
     BATCH_SIZE,
     LR,

@@ -1,7 +1,7 @@
-# Fed-MammoBench benchmark image with GPU (ResNet50 and EfficientNetV2 variants). Built from
+# Fed-MammoBench benchmark image with GPU (EfficientNet-B0 and EfficientNetV2 variants). Built from
 # the LOCAL checkout (not a git clone). Build and run through scripts/run_mammobench_docker.sh.
 # Neither the images nor the ImageNet weights are baked in: the images are mounted at /data
-# and torchvision caches the weights in /cache/torch (TORCH_HOME), both at run time.
+# and the ImageNet weights are cached in /cache/torch (TORCH_HOME), both at run time.
 FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
 
 WORKDIR /opt/FLamby

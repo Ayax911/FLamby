@@ -91,6 +91,10 @@ DATASET_LABELS = {
         "centers": ["CMMD", "KAU-BCMD", "CDD-CESM", "INbreast"],
         "classes": ["Benigno", "Maligno"],
     },
+    "fed_mammobench_resnet18": {
+        "centers": ["CMMD", "KAU-BCMD", "CDD-CESM", "INbreast"],
+        "classes": ["Benigno", "Maligno"],
+    },
     "fed_heart_disease": {
         "centers": ["cleveland", "hungarian", "switzerland", "va"],
         "classes": ["Sin enfermedad", "Con enfermedad"],

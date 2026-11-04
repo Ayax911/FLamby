@@ -5,8 +5,9 @@
 # (BEST=1). Derived from run_isic2019_docker.sh; same behaviour (pause/resume, JOBS, PROGRESS.md).
 #
 # DATASET picks the backbone (same data, partition and recipe, only the model changes):
-#   fed_mammobench               ResNet50 (ImageNet)        config_mammobench.json
+#   fed_mammobench               EfficientNet-B0 (ImageNet) config_mammobench.json
 #   fed_mammobench_efficientnetv2  EfficientNetV2 (ImageNet)  config_mammobench_efficientnetv2.json
+#   fed_mammobench_resnet18      ResNet18 (ImageNet)        config_mammobench_resnet18.json
 #
 # Usage (from anywhere; mammobench/run_*.sh pin the settings of the full experiment):
 #   bash scripts/run_mammobench_docker.sh weights               # cache the ImageNet weights (once)
@@ -20,8 +21,8 @@
 # on the host (~/.netrc is mounted); without credentials runs are saved offline in each run's
 # folder (upload later with `wandb sync`). WANDB_PROJECT="" disables W&B.
 #
-# Model knobs, passed into the container: MAMMOBENCH_UNFREEZE (none | layer4... for ResNet50,
-# none | all | K for EfficientNetV2; default none = frozen backbone), MAMMOBENCH_EFFNET (s|m|l).
+# Model knob, passed into the container: MAMMOBENCH_EFFNET (s|m|l, EfficientNetV2 size; default s).
+# Both backbones are trained end to end (ImageNet init), as Fed-ISIC2019.
 #
 # Outputs (OUT_DIR): runs/$DATASET/seed<S>/<run>/ reports, results_<name>.csv, grid/, best/,
 # logs/, PROGRESS.md. Re-running is safe: experiments already in a results CSV are skipped.
@@ -35,7 +36,9 @@ case "$DATASET" in
         CONFIG_FILE="config_mammobench.json"; OUT_SUFFIX="mammobench" ;;
     fed_mammobench_efficientnetv2)
         CONFIG_FILE="config_mammobench_efficientnetv2.json"; OUT_SUFFIX="mammobench_efficientnetv2" ;;
-    *) echo "Unknown DATASET=$DATASET (fed_mammobench | fed_mammobench_efficientnetv2)" >&2; exit 1 ;;
+    fed_mammobench_resnet18)
+        CONFIG_FILE="config_mammobench_resnet18.json"; OUT_SUFFIX="mammobench_resnet18" ;;
+    *) echo "Unknown DATASET=$DATASET (fed_mammobench | fed_mammobench_efficientnetv2 | fed_mammobench_resnet18)" >&2; exit 1 ;;
 esac
 # Folder that holds norm_0_1/ (the extracted preproccesed_julian.zip).
 DATA_DIR="${DATA_DIR:-$REPO_DIR/../data/preproccesed_julian}"
@@ -56,7 +59,6 @@ GRID="${GRID:-0}"
 JOBS="${JOBS:-1}"          # grid containers running at the same time on the GPU
 DRY_RUN="${DRY_RUN:-0}"
 WANDB_PROJECT="${WANDB_PROJECT-flamby-mammobench}"
-UNFREEZE="${MAMMOBENCH_UNFREEZE:-none}"
 EFFNET="${MAMMOBENCH_EFFNET:-s}"
 
 # Grid (GRID=1): only on GRID_SEED, whatever SEEDS says. Log-spaced like the paper's search.
@@ -241,12 +243,13 @@ log "Building image $IMAGE from $REPO_DIR"
 # ---------------------------------------------------------------- 2. weights (optional)
 if [[ "$MODE" == weights ]]; then
     mkdir -p "$CACHE_DIR"
-    log "Caching the ImageNet weights of ResNet50 and EfficientNetV2 in $CACHE_DIR"
+    log "Caching the ImageNet weights of EfficientNet-B0, EfficientNetV2 and ResNet18 in $CACHE_DIR"
     [[ "$DRY_RUN" == 1 ]] || docker run --rm --user "$(id -u):$(id -g)" \
         -v "$CACHE_DIR:/cache/torch" -e TORCH_HOME=/cache/torch --entrypoint python "$IMAGE" -c "
 from flamby.datasets.fed_mammobench.model import Baseline as R
 from flamby.datasets.fed_mammobench_efficientnetv2.model import Baseline as E
-R(pretrained=True); E(pretrained=True, arch='s'); print('weights cached')"
+from flamby.datasets.fed_mammobench_resnet18.model import Baseline as N
+R(pretrained=True); E(pretrained=True, arch='s'); N(pretrained=True); print('weights cached')"
     log "Done."
     exit 0
 fi
@@ -265,7 +268,7 @@ mkdir -p "$OUT_DIR/logs" "$OUT_DIR/grid" "$OUT_DIR/best" "$CACHE_DIR"
 # A new launch clears a previous pause and records itself for `status` and PROGRESS.md.
 rm -f "$OUT_DIR/STOP"
 if [[ "$DRY_RUN" != 1 ]]; then
-    echo "DATASET=$DATASET SEEDS=\"$SEEDS\" GRID=$GRID BEST=$BEST JOBS=$JOBS DEBUG=$DEBUG MAMMOBENCH_UNFREEZE=$UNFREEZE MAMMOBENCH_EFFNET=$EFFNET bash $0" \
+    echo "DATASET=$DATASET SEEDS=\"$SEEDS\" GRID=$GRID BEST=$BEST JOBS=$JOBS DEBUG=$DEBUG MAMMOBENCH_EFFNET=$EFFNET bash $0" \
         > "$OUT_DIR/.launch_cmd"
     declare -p DATASET CONFIG_FILE RESULTS_CSV BEST_CONFIG SEEDS GRID BEST GRID_SEED GRID_LRS GRID_MUS \
         GRID_SLRS GRID_SKIP DEBUG \
@@ -283,8 +286,7 @@ run() {
         --label "flamby-mammobench=$name"
         --user "$(id -u):$(id -g)"
         -v "$DATA_DIR:/data:ro" -v "$OUT_DIR:/out" -v "$CACHE_DIR:/cache/torch"
-        -e TORCH_HOME=/cache/torch -e MAMMOBENCH_DATA=/data
-        -e MAMMOBENCH_UNFREEZE="$UNFREEZE" -e MAMMOBENCH_EFFNET="$EFFNET"
+        -e TORCH_HOME=/cache/torch -e MAMMOBENCH_DATA=/data -e MAMMOBENCH_EFFNET="$EFFNET"
         # Passed by name only, so the key never shows in the printed command.
         -e WANDB_API_KEY -e WANDB_ENTITY -e WANDB_MODE)
     # `wandb login` on the host saves the key in ~/.netrc (HOME is /tmp inside).

@@ -14,6 +14,7 @@ falta una variante multiclase.
 | lanzador conda y prueba rápida | `mammobench/run.sh`, `mammobench/smoke_test.py` |
 | Docker (workstation) | `mammobench/run_docker_*.sh`, `scripts/run_mammobench_docker.sh`, `dockers/Dockerfile.mammobench` |
 | variante EfficientNetV2 | `flamby/datasets/fed_mammobench_efficientnetv2/`, `flamby/config_mammobench_efficientnetv2.json` |
+| variante ResNet18 | `flamby/datasets/fed_mammobench_resnet18/`, `flamby/config_mammobench_resnet18.json` |
 
 ## Clientes y partición
 
@@ -47,18 +48,15 @@ Si cambian los números, copiar `NUM_TRAIN_SAMPLES` (common.py) y `alpha` (loss.
 `train=True` → train y `train=False` → test (lo que evalúa `fed_benchmark.py`). Para val:
 `FedMammobench(center=i, split="val")` (o `pooled=True`); sin augmentation.
 
-## Imágenes y modelo (receta de exp17: ImageNet, `norm_0_1`)
+## Imágenes y modelo (como Fed-ISIC2019 binario, con ImageNet y `norm_0_1`)
 
 - TIFF float32 de 1 canal en [0, 1], 224×224 → réplica a 3 canales → `Normalize` con media 0.449 /
-  std 0.226 (promedio de las de ImageNet, igual que exp17). Augmentation de train: hflip 0.5,
-  vflip 0.2, rotación 15°, blur 0.3 (torchvision sobre tensores, sin albumentations).
-- `Baseline`: ResNet50 `IMAGENET1K_V2` (torchvision) con backbone congelado + cabeza
-  `2048→1024→LeakyReLU(0.2)→Dropout(0.5)→2`. `Baseline(unfreeze_from="layer4")` descongela desde
-  un bloque. Los BatchNorm del backbone congelado quedan en eval (`freeze_bn_stats=True`): sus
-  estadísticas son buffers que las estrategias de FLamby no agregan, y si se actualizaran cada
-  cliente tendría un backbone distinto. Esto difiere de exp17 (`freeze_bn_stats: false`).
-- Pérdida: focal ponderada de FLamby con `alpha = N/n_clase = [1.5186, 2.9284]` (exp17 usaba CE
-  ponderada); métrica: balanced accuracy.
+  std 0.226 (promedio de las de ImageNet, como exp17 de FedMammoBench). Augmentation de train: hflip
+  0.5, vflip 0.2, rotación 15°, blur 0.3 (torchvision sobre tensores, sin albumentations).
+- `Baseline` de `fed_mammobench`: **EfficientNet-B0** (`efficientnet-pytorch`, pesos ImageNet), igual
+  que ISIC binario: se entrena **entera** y la última capa es `Linear(1280, 2)`.
+- Pérdida: focal ponderada de FLamby con `alpha = N/n_clase = [1.5186, 2.9284]`; métrica: balanced
+  accuracy.
 
 ## Ejecutar
 
@@ -74,11 +72,15 @@ La primera vez torchvision descarga los pesos ImageNet (~100 MB).
 
 ## EfficientNetV2 (`fed_mammobench_efficientnetv2`)
 
-Mismos datos, partición, clientes, cabeza MLP, pérdida, métrica y presupuesto; solo cambia el
-backbone: torchvision `efficientnet_v2_s` (`IMAGENET1K_V1`), congelado, cabeza
-`1280→1024→LeakyReLU→Dropout→2`. Config: `flamby/config_mammobench_efficientnetv2.json`.
-`MAMMOBENCH_EFFNET=m|l` cambia el tamaño; `MAMMOBENCH_UNFREEZE=none|all|K` (K = bloque de
-`features` desde el que se entrena; en ResNet50 `none|layer4|layer3|...|all`).
+Mismos datos, partición, clientes, pérdida, métrica y presupuesto; solo cambia el backbone:
+torchvision `efficientnet_v2_s` (`IMAGENET1K_V1`), entrenado entero, última capa `Linear(1280, 2)`.
+Config: `flamby/config_mammobench_efficientnetv2.json`. `MAMMOBENCH_EFFNET=m|l` cambia el tamaño.
+
+## ResNet18 (`fed_mammobench_resnet18`)
+
+Tercera variante, con la misma receta: torchvision `resnet18` (`IMAGENET1K_V1`), entrenado entero,
+última capa `Linear(512, 2)`. Config: `flamby/config_mammobench_resnet18.json`; lanzador:
+`mammobench/run_docker_resnet18.sh`. Salidas en `outputs/mammobench_resnet18`.
 
 ## Docker en la workstation (GPU)
 
@@ -90,10 +92,11 @@ Mismo mecanismo que `run_binary.sh` de ISIC (`scripts/run_mammobench_docker.sh`,
 cd /media/sosagro4c/DATA3/03_pregradojulian/FLamby && git pull
 export WANDB_API_KEY=...            # https://wandb.ai/authorize (o `wandb login` una vez)
 export WANDB_ENTITY=<usuario-o-equipo>   # opcional
-bash mammobench/run_docker_resnet50.sh weights     # una vez: cachea pesos ImageNet (ver abajo)
-DEBUG=1 OUT_DIR=outputs/mm_debug bash mammobench/run_docker_resnet50.sh   # humo: 1 ronda
-bash mammobench/run_docker_resnet50.sh             # ResNet50 completo
+bash mammobench/run_docker_efficientnetb0.sh weights     # una vez: cachea pesos ImageNet (ver abajo)
+DEBUG=1 OUT_DIR=outputs/mm_debug bash mammobench/run_docker_efficientnetb0.sh   # humo: 1 ronda
+bash mammobench/run_docker_efficientnetb0.sh             # EfficientNet-B0 completo
 bash mammobench/run_docker_efficientnetv2.sh       # EfficientNetV2 completo (después, o con otra GPU)
+bash mammobench/run_docker_resnet18.sh             # ResNet18 completo
 bash mammobench/run_docker_<modelo>.sh status | stop
 ```
 Variables (todas opcionales salvo la de W&B si quieres subir en línea):
@@ -109,7 +112,7 @@ Variables (todas opcionales salvo la de W&B si quieres subir en línea):
 | `OUT_DIR` | salidas | `outputs/mammobench[_efficientnetv2]` |
 | `GPU` / `JOBS` | índice de GPU / contenedores simultáneos | `0` / `4` |
 | `GRID` `BEST` `BENCH` | `0` omite esa parte | `1` |
-| `MAMMOBENCH_UNFREEZE`, `MAMMOBENCH_EFFNET` | descongelado / tamaño EfficientNetV2 | `none` / `s` |
+| `MAMMOBENCH_EFFNET` | tamaño de EfficientNetV2 (`s`, `m`, `l`) | `s` |
 
 Con el layout actual de la workstation (`03_pregradojulian/{FLamby,data,cache_torch}`) los defaults
 de `DATA_DIR` y `CACHE_DIR` ya apuntan bien; no hace falta exportarlos. W&B agrupa por

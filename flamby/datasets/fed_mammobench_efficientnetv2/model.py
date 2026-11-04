@@ -18,71 +18,34 @@ _ARCHS = {
 
 
 class Baseline(nn.Module):
-    """EfficientNetV2 (ImageNet) + the same MLP head as the ResNet50 baseline.
+    """EfficientNetV2 (ImageNet), the counterpart of the EfficientNet-B0 baseline.
 
-    Backbone: torchvision `efficientnet_v2_<s|m|l>` (`IMAGENET1K_V1`), without its classifier.
-    Head:     Linear(n_features, 1024) -> LeakyReLU(0.2) -> Dropout(0.5) -> Linear(1024, 2).
+    Same recipe as `fed_mammobench`: torchvision `efficientnet_v2_<s|m|l>` with ImageNet
+    weights, whole network trained, and only the last layer replaced by a Linear with 2
+    outputs (benign, malignant); torchvision's dropout before it is kept (as B0 has its own).
 
     Parameters
     ----------
     pretrained : bool
         Load the ImageNet weights (downloaded and cached by torchvision on first use).
     arch : str, optional
-        "s" (default), "m" or "l". If None, env var MAMMOBENCH_EFFNET is read.
-    unfreeze_from : str, optional
-        "none" (the default: backbone frozen, only the head trains, like the ResNet50
-        baseline), "all", or K (e.g. "5" or "features.5") to train `features[K:]`
-        (features has 8 blocks, 0 = stem). If None, env var MAMMOBENCH_UNFREEZE is read.
-    freeze_bn_stats : bool
-        Keep the BatchNorm layers of the frozen blocks in eval mode (their running
-        statistics are buffers that FLamby's strategies do not aggregate). Default True.
+        "s" (default), "m" or "l". If None, env var MAMMOBENCH_EFFNET is read (default "s");
+        it is how the Docker runner picks it, because fed_benchmark.py calls Baseline()
+        without arguments.
     """
 
-    def __init__(self, pretrained=True, arch=None, unfreeze_from=None, freeze_bn_stats=True):
+    def __init__(self, pretrained=True, arch=None):
         super(Baseline, self).__init__()
         arch = (arch or os.environ.get("MAMMOBENCH_EFFNET", "s")).lower()
-        if unfreeze_from is None:
-            unfreeze_from = os.environ.get("MAMMOBENCH_UNFREEZE", "none")
         if arch not in _ARCHS:
             raise ValueError(f"arch={arch!r}, use one of {sorted(_ARCHS)}")
         factory, weights = _ARCHS[arch]
-        base = factory(weights=weights if pretrained else None)
-        nftrs = base.classifier[-1].in_features
-        base.classifier = nn.Identity()
-        self.base_model = base
+        self.pretrained = pretrained
         self.arch = arch
-        self.unfreeze_from = unfreeze_from
-        self.freeze_bn_stats = freeze_bn_stats
-        self.head = nn.Sequential(
-            nn.Linear(nftrs, 1024),
-            nn.LeakyReLU(0.2),
-            nn.Dropout(0.5),
-            nn.Linear(1024, 2),
-        )
-
-        n_blocks = len(base.features)
-        u = str(unfreeze_from).replace("features.", "")
-        if u == "none":
-            first = n_blocks
-        elif u in ("all", "conv1"):
-            first = 0
-        elif u.isdigit() and int(u) < n_blocks:
-            first = int(u)
-        else:
-            raise ValueError(f"unfreeze_from={unfreeze_from!r}: none, all or 0..{n_blocks - 1}")
-        self._first_trainable = first
-        for i, block in enumerate(base.features):
-            for p in block.parameters():
-                p.requires_grad = i >= first
-
-    def train(self, mode=True):
-        super().train(mode)
-        if mode and self.freeze_bn_stats:
-            for block in list(self.base_model.features)[: self._first_trainable]:
-                for m in block.modules():
-                    if isinstance(m, nn.BatchNorm2d):
-                        m.eval()
-        return self
+        self.base_model = factory(weights=weights if pretrained else None)
+        nftrs = self.base_model.classifier[-1].in_features
+        print("Number of features output by EfficientNetV2", nftrs)
+        self.base_model.classifier[-1] = nn.Linear(nftrs, 2)
 
     def forward(self, image):
-        return self.head(self.base_model(image))
+        return self.base_model(image)
