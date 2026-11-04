@@ -74,6 +74,10 @@ GRID_SKIP="${GRID_SKIP:-}"
 BEST="${BEST:-0}"
 BEST_CONFIG="$REPO_DIR/flamby/$CONFIG_FILE"
 
+# docker -v needs absolute host paths (a relative one is read as a volume name).
+OUT_DIR="$(realpath -m "$OUT_DIR")"; DATA_DIR="$(realpath -m "$DATA_DIR")"
+CACHE_DIR="$(realpath -m "$CACHE_DIR")"
+
 log() { printf '\n==> %s\n' "$*"; }
 
 # grid_each <fn>: calls `fn <run-name> <fed_benchmark.py args...>` for every grid point.
