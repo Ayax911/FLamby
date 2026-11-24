@@ -1,0 +1,50 @@
+Loaded pretrained weights for efficientnet-b0
+Number of features output by EfficientNet 1280
+========================
+FEDADAM
+========================
+FL strategy FedAdam  num_updates  100
+wandb: [wandb.login()] Loaded credentials for https://api.forge.coreweave.com from WANDB_API_KEY.
+wandb: Currently logged in as: j-mast8924 (j-mast8924-instituci-n-universitaria-itm) to https://api.forge.coreweave.com. Use `wandb login --relogin` to force relogin
+wandb: setting up run z7c50jld
+wandb: Tracking run with wandb version 0.31.0
+wandb: Run data is saved locally in /out/runs/fed_isic2019/seed42/FedAdam-num-updates100-lr0.01-slr10.0/wandb/run-20261028_052516-z7c50jld
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run FedAdam-num-updates100-lr0.01-slr10.0-seed42
+wandb: ⭐️ View project at https://forge.coreweave.com/wandb/j-mast8924-instituci-n-universitaria-itm/flamby
+wandb: 🚀 View run at https://forge.coreweave.com/wandb/j-mast8924-instituci-n-universitaria-itm/flamby/runs/z7c50jld
+  0%|          | 0/9 [00:00<?, ?it/s]  0%|          | 0/9 [02:08<?, ?it/s]
+Traceback (most recent call last):
+  File "/opt/FLamby/flamby/benchmarks/fed_benchmark.py", line 742, in <module>
+    main(args)
+  File "/opt/FLamby/flamby/benchmarks/fed_benchmark.py", line 488, in main
+    m = s.run()[0]
+        ^^^^^^^
+  File "/opt/FLamby/flamby/strategies/fed_opt.py", line 165, in run
+    self.perform_round()
+  File "/opt/FLamby/flamby/benchmarks/fed_benchmark.py", line 484, in perform_round_and_log
+    reporter.log_epoch(s.models_list[0].model)
+  File "/opt/FLamby/flamby/reporting.py", line 607, in log_epoch
+    train_metrics = compute_metrics(*self._pool(train_results))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/FLamby/flamby/reporting.py", line 230, in compute_metrics
+    aucs = [
+           ^
+  File "/opt/FLamby/flamby/reporting.py", line 231, in <listcomp>
+    skm.roc_auc_score(y_true == k, probs[:, k])
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/utils/_param_validation.py", line 218, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/metrics/_ranking.py", line 710, in roc_auc_score
+    y_score = check_array(y_score, ensure_2d=False)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/utils/validation.py", line 1090, in check_array
+    _assert_all_finite(
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/utils/validation.py", line 137, in _assert_all_finite
+    _assert_all_finite_element_wise(
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/utils/validation.py", line 186, in _assert_all_finite_element_wise
+    raise ValueError(msg_err)
+ValueError: Input contains NaN.
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mFedAdam-num-updates100-lr0.01-slr10.0-seed42[0m at: [34mhttps://forge.coreweave.com/wandb/j-mast8924-instituci-n-universitaria-itm/flamby/runs/z7c50jld[0m
+[1;34mwandb[0m: Find logs at: [1;35m../../../../out/runs/fed_isic2019/seed42/FedAdam-num-updates100-lr0.01-slr10.0/wandb/run-20261028_052516-z7c50jld/logs[0m

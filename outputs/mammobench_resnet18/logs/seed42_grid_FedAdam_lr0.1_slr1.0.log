@@ -1,0 +1,49 @@
+Number of features output by ResNet18 512
+========================
+FEDADAM
+========================
+FL strategy FedAdam  num_updates  100
+wandb: Tracking run with wandb version 0.31.2
+wandb: W&B syncing is set to `offline` in this directory. Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+wandb: Run data is saved locally in /out/runs/fed_mammobench_resnet18/seed42/FedAdam-num-updates100-lr0.1-slr1.0/wandb/offline-run-20261123_201129-vc8n09ac
+wandb: View this run in the terminal with `wandb leet`
+  0%|          | 0/15 [00:00<?, ?it/s][reporter] server paso 1: val_loss=inf val_auc=0.5000
+  7%|▋         | 1/15 [01:15<17:40, 75.77s/it][reporter] server paso 2: val_loss=2302227319722.0527 val_auc=0.5000
+ 13%|█▎        | 2/15 [02:43<17:59, 83.02s/it][reporter] server paso 3: val_loss=3272347288.2494 val_auc=0.5000
+ 20%|██        | 3/15 [04:13<17:11, 85.97s/it][reporter] server paso 4: val_loss=174744653.0456 val_auc=0.5000
+ 27%|██▋       | 4/15 [05:42<16:00, 87.33s/it][reporter] server paso 5: val_loss=1912638.0252 val_auc=0.5000
+ 33%|███▎      | 5/15 [07:12<14:41, 88.16s/it][reporter] server paso 6: val_loss=2610322.8273 val_auc=0.5000
+ 40%|████      | 6/15 [08:41<13:15, 88.42s/it][reporter] server paso 7: val_loss=141398.5812 val_auc=0.5000 47%|████▋     | 7/15 [10:07<11:40, 87.58s/it]
+[reporter] server paso 8: val_loss=69197.8319 val_auc=0.5000 53%|█████▎    | 8/15 [11:37<10:18, 88.38s/it]
+[reporter] server paso 9: val_loss=37192.0575 val_auc=0.5000
+ 60%|██████    | 9/15 [13:05<08:50, 88.46s/it][reporter] server paso 10: val_loss=79355.2205 val_auc=0.5000
+ 67%|██████▋   | 10/15 [14:31<07:17, 87.51s/it][reporter] server paso 11: val_loss=85812.0894 val_auc=0.5000
+ 73%|███████▎  | 11/15 [16:05<05:57, 89.48s/it][reporter] server paso 12: val_loss=36481.7023 val_auc=0.4928
+ 80%|████████  | 12/15 [17:38<04:31, 90.64s/it][reporter] server paso 13: val_loss=52864.5870 val_auc=0.4982
+ 87%|████████▋ | 13/15 [19:14<03:04, 92.15s/it] 93%|█████████▎| 14/15 [20:46<01:32, 92.22s/it][reporter] server paso 14: val_loss=11293.5083 val_auc=0.4946
+[reporter] server paso 15: val_loss=4736.9043 val_auc=0.5000
+100%|██████████| 15/15 [22:21<00:00, 92.93s/it]100%|██████████| 15/15 [22:21<00:00, 89.41s/it]
+Traceback (most recent call last):
+  File "/opt/FLamby/flamby/benchmarks/fed_benchmark.py", line 742, in <module>
+    main(args)
+  File "/opt/FLamby/flamby/benchmarks/fed_benchmark.py", line 491, in main
+    reporter.finish(m)
+  File "/opt/FLamby/flamby/reporting.py", line 696, in finish
+    plot_curves(self.history, self.main_dir / "plots", best_idx, x_label)
+  File "/opt/FLamby/flamby/reporting.py", line 407, in plot_curves
+    plot_metric_curve(
+  File "/opt/FLamby/flamby/reporting.py", line 390, in plot_metric_curve
+    ax.set_ylim(0, top)
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/axes/_base.py", line 4241, in set_ylim
+    return self.yaxis._set_lim(bottom, top, emit=emit, auto=auto)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/axis.py", line 1264, in _set_lim
+    v1 = self.axes._validate_converted_limits(v1, self.convert_units)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/matplotlib/axes/_base.py", line 3913, in _validate_converted_limits
+    raise ValueError("Axis limits cannot be NaN or Inf")
+ValueError: Axis limits cannot be NaN or Inf
+[1;34mwandb[0m: 
+[1;34mwandb[0m: You can sync this run to the cloud by running:
+[1;34mwandb[0m: [1mwandb sync /out/runs/fed_mammobench_resnet18/seed42/FedAdam-num-updates100-lr0.1-slr1.0/wandb/offline-run-20261123_201129-vc8n09ac[0m
+[1;34mwandb[0m: Find logs at: [1;35m../../../../out/runs/fed_mammobench_resnet18/seed42/FedAdam-num-updates100-lr0.1-slr1.0/wandb/offline-run-20261123_201129-vc8n09ac/logs[0m

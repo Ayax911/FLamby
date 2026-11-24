@@ -1,0 +1,43 @@
+Number of features output by ResNet18 512
+========================
+FEDADAM
+========================
+FL strategy FedAdam  num_updates  100
+wandb: Tracking run with wandb version 0.31.2
+wandb: W&B syncing is set to `offline` in this directory. Run `wandb online` or set WANDB_MODE=online to enable cloud syncing.
+wandb: Run data is saved locally in /out/runs/fed_mammobench_resnet18/seed42/FedAdam-num-updates100-lr0.1-slr10.0/wandb/offline-run-20261123_203405-hgbjq6gm
+wandb: View this run in the terminal with `wandb leet`
+  0%|          | 0/15 [00:00<?, ?it/s]  0%|          | 0/15 [01:32<?, ?it/s]
+Traceback (most recent call last):
+  File "/opt/FLamby/flamby/benchmarks/fed_benchmark.py", line 742, in <module>
+    main(args)
+  File "/opt/FLamby/flamby/benchmarks/fed_benchmark.py", line 488, in main
+    m = s.run()[0]
+        ^^^^^^^
+  File "/opt/FLamby/flamby/strategies/fed_opt.py", line 165, in run
+    self.perform_round()
+  File "/opt/FLamby/flamby/benchmarks/fed_benchmark.py", line 484, in perform_round_and_log
+    reporter.log_epoch(s.models_list[0].model)
+  File "/opt/FLamby/flamby/reporting.py", line 630, in log_epoch
+    train_metrics = compute_metrics(*self._pool(train_results))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/FLamby/flamby/reporting.py", line 241, in compute_metrics
+    auc=skm.roc_auc_score(y_true, probs[:, 1]) if len(set(y_true)) == 2 else 0.0,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/utils/_param_validation.py", line 218, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/metrics/_ranking.py", line 710, in roc_auc_score
+    y_score = check_array(y_score, ensure_2d=False)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/utils/validation.py", line 1090, in check_array
+    _assert_all_finite(
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/utils/validation.py", line 137, in _assert_all_finite
+    _assert_all_finite_element_wise(
+  File "/opt/conda/lib/python3.11/site-packages/sklearn/utils/validation.py", line 186, in _assert_all_finite_element_wise
+    raise ValueError(msg_err)
+ValueError: Input contains NaN.
+[1;34mwandb[0m: 
+[1;34mwandb[0m: You can sync this run to the cloud by running:
+[1;34mwandb[0m: [1mwandb sync /out/runs/fed_mammobench_resnet18/seed42/FedAdam-num-updates100-lr0.1-slr10.0/wandb/offline-run-20261123_203405-hgbjq6gm[0m
+[1;34mwandb[0m: Find logs at: [1;35m../../../../out/runs/fed_mammobench_resnet18/seed42/FedAdam-num-updates100-lr0.1-slr10.0/wandb/offline-run-20261123_203405-hgbjq6gm/logs[0m
