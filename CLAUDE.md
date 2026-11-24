@@ -183,3 +183,16 @@ Caveats seen while reading the code (verify before relying on them):
   because the DP check needs all three non-`None`.
 - `ARCHITECTURE.md` and `EXPERIMENTS.md` (untracked) hold the longer general and Fed-ISIC2019
   walkthroughs; keep this file as the short router.
+
+## Fed-MammoBench Docker runner (fork addition)
+
+`scripts/run_mammobench_docker.sh` is the MammoBench counterpart of the ISIC runner (benign vs
+malignant, 4 clients, same pause/resume/`JOBS`/`PROGRESS.md` behavior). `DATASET` picks the backbone:
+`fed_mammobench` (EfficientNet-B0), `fed_mammobench_efficientnetv2` (size via `MAMMOBENCH_EFFNET=s|m|l`),
+`fed_mammobench_resnet18`; each has its own `config_<dataset>.json` and `outputs/<suffix>/` dir.
+`mammobench/run_*.sh` pin the full-experiment settings; data is read from `../data/preproccesed_julian`
+and ImageNet weights are cached in `../cache_torch` (`... weights` mode downloads them once).
+
+Where to check experiment status: `outputs/<suffix>/PROGRESS.md` (also `.launch_cmd` for the exact
+command to resume). Its "Estado: en curso" can be stale if the process died without `stop`; confirm with
+`docker ps` and the mtime of `outputs/<suffix>/logs/`.

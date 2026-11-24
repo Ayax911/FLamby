@@ -1,0 +1,6 @@
+optimizer_class,Test,seed,learning_rate,Method,Metric,deterministic_cycle
+<class 'torch.optim.sgd.SGD'>,client_test_0,42,0.0031622776601683,Cyclic100,0.556899029823931,False
+<class 'torch.optim.sgd.SGD'>,client_test_1,42,0.0031622776601683,Cyclic100,0.6388888888888888,False
+<class 'torch.optim.sgd.SGD'>,client_test_2,42,0.0031622776601683,Cyclic100,0.5590230664857531,False
+<class 'torch.optim.sgd.SGD'>,client_test_3,42,0.0031622776601683,Cyclic100,0.46875,False
+<class 'torch.optim.sgd.SGD'>,Pooled Test,42,0.0031622776601683,Cyclic100,0.5669846845854208,False

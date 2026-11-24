@@ -1,0 +1,6 @@
+optimizer_class,Test,learning_rate,seed,server_learning_rate,Method,Metric
+<class 'torch.optim.sgd.SGD'>,client_test_0,0.0316227766016837,42,0.01,Scaffold100,0.48604024434063964
+<class 'torch.optim.sgd.SGD'>,client_test_1,0.0316227766016837,42,0.01,Scaffold100,0.6226851851851852
+<class 'torch.optim.sgd.SGD'>,client_test_2,0.0316227766016837,42,0.01,Scaffold100,0.4862053369516056
+<class 'torch.optim.sgd.SGD'>,client_test_3,0.0316227766016837,42,0.01,Scaffold100,0.59375
+<class 'torch.optim.sgd.SGD'>,Pooled Test,0.0316227766016837,42,0.01,Scaffold100,0.5175612000855537

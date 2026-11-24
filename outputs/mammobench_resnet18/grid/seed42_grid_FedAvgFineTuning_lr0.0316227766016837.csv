@@ -1,0 +1,6 @@
+seed,num_fine_tuning_steps,Method,learning_rate,optimizer_class,Metric,Test
+42,3,FedAvgFineTuning100,0.0316227766016837,<class 'torch.optim.sgd.SGD'>,0.6725476104922745,client_test_0
+42,3,FedAvgFineTuning100,0.0316227766016837,<class 'torch.optim.sgd.SGD'>,0.5300925925925926,client_test_1
+42,3,FedAvgFineTuning100,0.0316227766016837,<class 'torch.optim.sgd.SGD'>,0.6974219810040706,client_test_2
+42,3,FedAvgFineTuning100,0.0316227766016837,<class 'torch.optim.sgd.SGD'>,0.5,client_test_3
+42,3,FedAvgFineTuning100,0.0316227766016837,<class 'torch.optim.sgd.SGD'>,0.6999591675362469,Pooled Test

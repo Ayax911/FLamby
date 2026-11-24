@@ -1,0 +1,6 @@
+Metric,Method,server_learning_rate,learning_rate,seed,Test,optimizer_class
+0.6847466762486525,FedAdagrad100,0.0031622776601683,0.01,42,client_test_0,<class 'torch.optim.sgd.SGD'>
+0.7361111111111112,FedAdagrad100,0.0031622776601683,0.01,42,client_test_1,<class 'torch.optim.sgd.SGD'>
+0.8342379014020804,FedAdagrad100,0.0031622776601683,0.01,42,client_test_2,<class 'torch.optim.sgd.SGD'>
+0.640625,FedAdagrad100,0.0031622776601683,0.01,42,client_test_3,<class 'torch.optim.sgd.SGD'>
+0.6963198931874599,FedAdagrad100,0.0031622776601683,0.01,42,Pooled Test,<class 'torch.optim.sgd.SGD'>

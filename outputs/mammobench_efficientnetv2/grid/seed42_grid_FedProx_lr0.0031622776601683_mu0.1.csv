@@ -1,0 +1,6 @@
+seed,learning_rate,Metric,Test,Method,optimizer_class,mu
+42,0.0031622776601683,0.6673553719008265,client_test_0,FedProx100,<class 'torch.optim.sgd.SGD'>,0.1
+42,0.0031622776601683,0.6226851851851852,client_test_1,FedProx100,<class 'torch.optim.sgd.SGD'>,0.1
+42,0.0031622776601683,0.7507914970601538,client_test_2,FedProx100,<class 'torch.optim.sgd.SGD'>,0.1
+42,0.0031622776601683,0.40625,client_test_3,FedProx100,<class 'torch.optim.sgd.SGD'>,0.1
+42,0.0031622776601683,0.6808748517392684,Pooled Test,FedProx100,<class 'torch.optim.sgd.SGD'>,0.1
